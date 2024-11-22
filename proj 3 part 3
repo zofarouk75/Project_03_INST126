@@ -1,0 +1,103 @@
+# 3 
+import calendar
+import random
+import os
+
+# making the schedule + 2 shifts 
+def care_schedule(caregivers, year, month):
+    shifts = ['7:00am - 1:00pm', '1:00pm - 7:00pm']
+    care_days = calendar.monthrange(year, month)[1]
+    schedule = {}
+
+# daily schedule details + caregiver availability
+    for day in range(1, care_days + 1):
+        schedule[day] = {}
+        for shift in shifts:
+            caregivers_avail = [
+                name for name, details in caregivers.items()
+                if details['availability'][day][shift.split()[0]] in ['A', 'P']
+            ]
+            random.shuffle(caregivers_avail)
+
+# assigning caregivers based on preference / availability
+            caregivers_pref = [
+                name for name in caregivers_avail
+                if caregivers[name]['availability'][day][shift.split()[0]] == 'P'
+            ]
+            if caregivers_pref:
+                assigned = caregivers_pref[0]
+            elif caregivers_avail:
+                assigned = caregivers_avail[0]
+            else:
+                assigned = 'unassigned'
+
+            schedule[day][shift] = assigned
+    return schedule
+
+
+# HTML calendar 
+def cal_html(schedule, year, month):
+    html = f"""
+    <html>
+    <head>
+        <title>Schedule for {calendar.month_name[month]} {year}</title>
+        <style>
+            table {{ border-collapse: collapse; width: 100%; }}
+            th, td {{ border: 1px solid black; padding: 5px; text-align: center; }}
+            th {{ background-color: #f0f0f0; }}
+        </style>
+    </head>
+    <body>
+        <h1>Schedule for {calendar.month_name[month]} {year}</h1>
+        <table>
+            <tr>
+                <th>Mon</th>
+                <th>Tue</th>
+                <th>Wed</th>
+                <th>Thu</th>
+                <th>Fri</th>
+                <th>Sat</th>
+                <th>Sun</th>
+            </tr>
+    """
+
+# fine-tuning so cal will be monthly/weekly
+    first_weekday, care_days = calendar.monthrange(year, month)
+    day_of = 1
+    for week in range((care_days + first_weekday) // 7 + 1):
+        html += '<tr>'
+        for day in range(7):
+            if (week == 0 and day < first_weekday) or day_of > care_days:
+                html += '<td></td>'
+            else:
+                morning = schedule[day_of].get('7:00am - 1:00pm', 'na')
+                afternoon = schedule[day_of].get('1:00pm - 7:00pm', 'na')
+                
+                html += f"<td>{day_of}<br><b>7:00am-1:00pm:</b> {morning}<br><b>1:00pm-7:00pm:</b> {afternoon}</td>"
+                day_of += 1
+        html += '</tr>'
+    html += '</table></body></html>'
+
+# save HTML cal
+    with open(f'care_schedule_{year}_{month}.html', 'w', encoding='utf-8') as f:
+        f.write(html)
+    print(f'HTML calendar for {calendar.month_name[month]} {year} has been created + saved')
+
+# making caregivers' availability into a list for the calender
+if __name__ == '__main__':
+    caregivers = {
+        'Aneesah': {'availability': {day: {'7:00am': 'A', '1:00pm': 'P'} for day in range(1, 32)}},
+        'Maya': {'availability': {day: {'7:00am': 'U', '1:00pm': 'P'} for day in range(1, 32)}},
+        'Zohair': {'availability': {day: {'7:00am': 'A', '1:00pm': 'A'} for day in range(1, 32)}},
+        'Caitlyn': {'availability': {day: {'7:00am': 'P', '1:00pm': 'A'} for day in range(1, 32)}},
+        'Violet': {'availability': {day: {'7:00am': 'P', '1:00pm': 'A'} for day in range(1, 32)}},
+        'Mel': {'availability': {day: {'7:00am': 'P', '1:00pm': 'U'} for day in range(1, 32)}},
+        'Viktor': {'availability': {day: {'7:00am': 'P', '1:00pm': 'A'} for day in range(1, 32)}},
+        'Ekko': {'availability': {day: {'7:00am': 'U', '1:00pm': 'P'} for day in range(1, 32)}}
+    }
+    
+# html cal details
+    year = int(input('year: '))
+    month = int(input('month(1-12): '))
+    schedule = care_schedule(caregivers, year, month)
+    cal_html(schedule, year, month)
