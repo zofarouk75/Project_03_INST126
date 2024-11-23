@@ -1,0 +1,137 @@
+import calendar
+import random
+
+# Define the Caregiver class
+class Caregiver:
+    def __init__(self, name, phone, email, pay_rate):
+        self.name = name
+        self.phone = phone
+        self.email = email
+        self.pay_rate = pay_rate
+        self.hours = 0
+        self.availability = {
+            'Monday': {'AM': 'preferred', 'PM': 'available'},
+            'Tuesday': {'AM': 'preferred', 'PM': 'unavailable'},
+            'Wednesday': {'AM': 'preferred', 'PM': 'unavailable'},
+            'Thursday': {'AM': 'preferred', 'PM': 'unavailable'},
+            'Friday': {'AM': 'preferred', 'PM': 'unavailable'},
+            'Saturday': {'AM': 'unavailable', 'PM': 'unavailable'},
+            'Sunday': {'AM': 'preferred', 'PM': 'available'}
+        }
+
+    def calculate_weekly_pay(self):
+        return self.hours * self.pay_rate
+
+
+# Generate a care schedule
+def care_schedule(caregivers, year, month):
+    shifts = ['7:00am - 1:00pm', '1:00pm - 7:00pm']
+    care_days = calendar.monthrange(year, month)[1]
+    schedule = {}
+
+    for day in range(1, care_days + 1):
+        schedule[day] = {}
+        for shift in shifts:
+            caregivers_avail = [
+                caregiver for caregiver in caregivers
+                if caregiver.availability.get(shift.split()[0], 'unavailable') in ['available', 'preferred']
+            ]
+            random.shuffle(caregivers_avail)
+
+            caregivers_pref = [
+                caregiver for caregiver in caregivers_avail
+                if caregiver.availability.get(shift.split()[0], 'unavailable') == 'preferred'
+            ]
+            if caregivers_pref:
+                assigned = caregivers_pref[0].name
+            elif caregivers_avail:
+                assigned = caregivers_avail[0].name
+            else:
+                assigned = 'unassigned'
+
+            schedule[day][shift] = assigned
+    return schedule
+
+
+# Create an HTML calendar
+def cal_html(schedule, year, month):
+    html = f"""
+    <html>
+    <head>
+        <title>Schedule for {calendar.month_name[month]} {year}</title>
+        <style>
+            table {{ border-collapse: collapse; width: 100%; }}
+            th, td {{ border: 1px solid black; padding: 5px; text-align: center; }}
+            th {{ background-color: #f0f0f0; }}
+        </style>
+    </head>
+    <body>
+        <h1>Schedule for {calendar.month_name[month]} {year}</h1>
+        <table>
+            <tr>
+                <th>Mon</th>
+                <th>Tue</th>
+                <th>Wed</th>
+                <th>Thu</th>
+                <th>Fri</th>
+                <th>Sat</th>
+                <th>Sun</th>
+            </tr>
+    """
+
+    first_weekday, care_days = calendar.monthrange(year, month)
+    day_of = 1
+    for week in range((care_days + first_weekday) // 7 + 1):
+        html += '<tr>'
+        for day in range(7):
+            if (week == 0 and day < first_weekday) or day_of > care_days:
+                html += '<td></td>'
+            else:
+                morning = schedule[day_of].get('7:00am - 1:00pm', 'na')
+                afternoon = schedule[day_of].get('1:00pm - 7:00pm', 'na')
+                html += f"<td>{day_of}<br><b>7:00am-1:00pm:</b> {morning}<br><b>1:00pm-7:00pm:</b> {afternoon}</td>"
+                day_of += 1
+        html += '</tr>'
+    html += '</table></body></html>'
+
+    with open(f'care_schedule_{year}_{month}.html', 'w', encoding='utf-8') as f:
+        f.write(html)
+    print(f'HTML calendar for {calendar.month_name[month]} {year} has been created and saved.')
+
+
+# Generate the pay report
+def generate_pay_report(caregivers):
+    weekly_total = 0
+    monthly_total = 0
+    report_lines = ["Pay Report:"]
+    for caregiver in caregivers:
+        weekly_pay = caregiver.calculate_weekly_pay()
+        weekly_total += weekly_pay
+        monthly_total += weekly_pay * 4
+        report_lines.append(
+            f"{caregiver.name}: Weekly Gross Pay = ${weekly_pay:.2f} | Monthly Gross Pay = ${weekly_pay * 4:.2f}"
+        )
+    report_lines.append(f"\nWeekly Total Pay: ${weekly_total:.2f}")
+    report_lines.append(f"Monthly Total Pay: ${monthly_total:.2f}")
+    report_text = "\n".join(report_lines)
+
+    with open("pay_report.txt", "w") as file:
+        file.write(report_text)
+
+    print("Pay report has been generated and saved as 'pay_report.txt'.")
+
+
+if __name__ == '__main__':
+    caregivers = [
+        Caregiver('Aneesah', '123-456-7890', 'aneesah@example.com', 20),
+        Caregiver('Maya', '987-654-3210', 'maya@example.com', 20),
+        Caregiver('Zohair', '456-789-0123', 'zohair@example.com', 20),
+        Caregiver('Caitlyn', '321-654-0987', 'caitlyn@example.com', 20),
+        Caregiver('Violet', '654-321-9870', 'violet@example.com', 20),
+    ]
+
+    year = int(input('Enter year: '))
+    month = int(input('Enter month (1-12): '))
+    schedule = care_schedule(caregivers, year, month)
+    cal_html(schedule, year, month)
+    generate_pay_report(caregivers)
